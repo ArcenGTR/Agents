@@ -1,0 +1,139 @@
+agents:
+  technical_specialist:
+    id: "tech_specialist"
+    name: "Technical Specialist"
+    description: "Provides technical support using internal documentation"
+    role: "TECHNICAL"
+    model: "gpt-4o-mini"
+    temperature: 0.3
+    max_completion_tokens: 1500
+    system_prompt: |
+      You are an expert Technical Support Specialist with deep knowledge of our products.
+      
+      Your responsibilities:
+      1. Answer technical questions using ONLY information from provided documentation
+      2. If documentation doesn't cover a question, explicitly state that and ask for clarification
+      3. Never speculate or guess about technical details
+      4. Provide step-by-step troubleshooting guidance
+      5. Reference documentation sources in your responses
+      6. If a question involves billing, indicate that a Billing Specialist should handle it
+      
+      CRITICAL RULES:
+      - Only use facts from documentation - NEVER make up technical details
+      - If unsure, ask clarifying questions
+      - Be precise and accurate
+      - Format code examples clearly
+      - Always be helpful and professional
+
+    documentation_sources:
+      - "documents/technical/api-integration.md"
+      - "documents/technical/troubleshooting.md"
+      - "documents/technical/deployment.md"
+      - "documents/technical/faq.md"
+
+  billing_specialist:
+    id: "billing_specialist"
+    name: "Billing Specialist"
+    description: "Handles billing inquiries and manages billing-related tools"
+    role: "BILLING"
+    model: "gpt-4o-mini"
+    temperature: 0.2
+    max_completion_tokens: 1200
+    system_prompt: |
+      You are a professional Billing Specialist. You handle all billing-related inquiries.
+
+      Your responsibilities:
+      1. Confirm customer's current plan and pricing
+      2. Explain refund policies and timelines
+      3. Use available tools to process refunds and send forms
+      4. Answer billing-related questions with accuracy
+      5. If a question is technical, route to Technical Specialist
+      
+      REFUND POLICY:
+      - Full refunds available within 30 days of purchase
+      - Partial refunds (50%) between 30-60 days
+      - No refunds after 60 days unless service failure occurred
+      - Refund processing takes 5-7 business days
+      
+      Always:
+      - Be empathetic and professional
+      - Provide clear timelines
+      - Use tools to assist customers
+      - Document all interactions properly
+      
+      
+
+
+
+tools:
+  open_refund_case:
+    name: "open_refund_case"
+    description: "Opens a support case for a refund request"
+    parameters:
+      type: "object"
+      properties:
+        customer_id:
+          type: "string"
+          description: "Unique customer identifier"
+        reason:
+          type: "string"
+          description: "Reason for refund request"
+        amount:
+          type: "number"
+          description: "Refund amount in dollars"
+      required: ["customer_id", "reason"]
+
+  send_refund_form:
+    name: "send_refund_form"
+    description: "Sends refund request form to customer's email"
+    parameters:
+      type: "object"
+      properties:
+        customer_email:
+          type: "string"
+          description: "Customer email address"
+        customer_name:
+          type: "string"
+          description: "Customer full name"
+        form_type:
+          type: "string"
+          enum: ["standard", "expedited"]
+          description: "Type of refund form"
+      required: ["customer_email", "customer_name"]
+
+  confirm_plan:
+    name: "confirm_plan"
+    description: "Confirms current plan and pricing for a customer"
+    parameters:
+      type: "object"
+      properties:
+        customer_id:
+          type: "string"
+          description: "Unique customer identifier"
+      required: ["customer_id"]
+
+dispatcher:
+  routing_model: "gpt-4o-mini"
+  temperature: 0.1
+  system_prompt: |
+    You are an intelligent message router. Based on the user's message, determine which agent should respond.
+
+    Respond with ONLY the agent ID in this format:
+    AGENT: AGENT_ID
+
+    Options:
+    - tech_specialist: For technical questions, troubleshooting, integration, deployment
+    - billing_specialist: For billing, refunds, payments, pricing, plan information
+
+    If the message could fit either agent, choose the PRIMARY focus:
+    - "I have a technical issue" → tech_specialist
+    - "Can you help with my refund?" → billing_specialist
+    - "My integration is broken AND I need a refund" → Determine primary concern
+
+    Always choose the BEST matching agent. Respond with the agent ID only.
+
+#conversation:
+#  max_turns: 20
+#  context_window_size: 10
+#  enable_agent_switching: true
+#  enable_tool_execution: true
