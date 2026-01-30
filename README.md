@@ -24,6 +24,10 @@ docker compose build
 docker compose up -d && docker attach support_agent_system
 ```
 
+Some starting logs are not visible, but after running you can freely chat with multi-agent system.
+
+Logs are visible in console in order, to have insights on how system internally works.
+
 ### Console Commands
 
 Once running, use these commands in the interactive console:
