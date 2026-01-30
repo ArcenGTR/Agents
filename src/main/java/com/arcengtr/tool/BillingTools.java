@@ -10,37 +10,6 @@ import java.util.UUID;
 
 @Slf4j
 public class BillingTools {
-    public static class ProcessRefundTool extends Tool {
-        public ProcessRefundTool() {
-            super("process_refund", "Process a refund for a customer based on their account and refund policy");
-            addParameter("customerId", "string", "The customer ID");
-            addParameter("amount", "number", "The refund amount");
-            addParameter("reason", "string", "The reason for refund");
-        }
-
-        @Override
-        public Object execute(Map<String, Object> arguments) throws Exception {
-            String customerId = (String) arguments.get("customerId");
-            Number amount = (Number) arguments.get("amount");
-            String reason = (String) arguments.get("reason");
-
-            // Simulate refund processing
-            String refundId = UUID.randomUUID().toString();
-            LocalDate processingDate = LocalDate.now().plusDays(5);
-
-            Map<String, Object> result = new HashMap<>();
-            result.put("refundId", refundId);
-            result.put("customerId", customerId);
-            result.put("amount", amount.doubleValue());
-            result.put("reason", reason);
-            result.put("status", "PENDING");
-            result.put("estimatedProcessingDate", processingDate.format(DateTimeFormatter.ISO_DATE));
-            result.put("message", "Refund request processed. You will receive funds within 5-7 business days.");
-
-            log.info("Refund processed: {} for customer: {}", refundId, customerId);
-            return result;
-        }
-    }
 
     public static class SendRefundFormTool extends Tool {
         public SendRefundFormTool() {
@@ -84,6 +53,7 @@ public class BillingTools {
             result.put("monthlyPrice", 99.99);
             result.put("annualPrice", 999.90);
             result.put("billingCycle", "monthly");
+            result.put("purchaseDate", LocalDate.now().minusDays(10).format(DateTimeFormatter.ISO_DATE));
             result.put("nextBillingDate", LocalDate.now().plusDays(15).format(DateTimeFormatter.ISO_DATE));
             result.put("features", new String[]{"API Access", "Priority Support", "Custom Integration"});
             result.put("status", "ACTIVE");
@@ -105,7 +75,6 @@ public class BillingTools {
         public Object execute(Map<String, Object> arguments) throws Exception {
             String customerId = (String) arguments.get("customerId");
             String issueType = (String) arguments.get("issueType");
-            String description = (String) arguments.get("description");
 
             String caseId = "CASE-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
 

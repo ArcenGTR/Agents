@@ -1,0 +1,11 @@
+services:
+  support-crew:
+    build: .
+    container_name: support_agent_system
+    stdin_open: true
+    tty: true
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}

@@ -1,157 +1,69 @@
 package com.arcengtr.documentation;
 
 import lombok.extern.slf4j.Slf4j;
-
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
 public class DocumentationManager {
-    private final Map<String, String> documents;
+    private final Map<String, String> documents = new HashMap<>();
 
-    public DocumentationManager() {
-        this.documents = new HashMap<>();
-        loadDocumentation();
-    }
-
-    private void loadDocumentation() {
-        // API Integration Documentation
-        documents.put("api-integration", """
-                # API Integration Guide
-                
-                ## Authentication
-                - Use Bearer token authentication
-                - Include Authorization header: "Bearer YOUR_API_KEY"
-                - API key can be generated from dashboard settings
-                
-                ## Base URL
-                - Production: https://api.company.com/v1
-                - Staging: https://staging-api.company.com/v1
-                
-                ## Rate Limiting
-                - 1000 requests per minute for standard tier
-                - 5000 requests per minute for enterprise tier
-                - Rate limit info in response headers: X-RateLimit-Remaining
-                
-                ## Common Endpoints
-                - POST /auth/token - Get authentication token
-                - GET /users/{id} - Retrieve user information
-                - POST /orders - Create new order
-                - GET /orders/{id} - Get order details
-                """);
-
-        // Troubleshooting Documentation
-        documents.put("troubleshooting", """
-                # Troubleshooting Guide
-                
-                ## 401 Unauthorized Error
-                Solution: Verify API key is correct and not expired
-                - Check dashboard for valid API key
-                - Ensure Authorization header format is correct
-                - Generate new API key if needed
-                
-                ## 429 Rate Limit Error
-                Solution: Implement exponential backoff and request queuing
-                - Wait 60 seconds before retrying
-                - Reduce concurrent request count
-                - Consider upgrading to enterprise tier
-                
-                ## Connection Timeout
-                Solution: Check network connectivity and endpoint availability
-                - Verify base URL is correct
-                - Check if service is in maintenance
-                - Implement connection timeout of 30 seconds
-                - Use retry mechanism with exponential backoff
-                
-                ## JSON Parse Error
-                Solution: Validate response format
-                - Ensure response Content-Type is application/json
-                - Check for special characters in data
-                - Validate JSON structure with validator
-                """);
-
-        // Deployment Documentation
-        documents.put("deployment", """
-                # Deployment Guide
-                
-                ## Prerequisites
-                - Java 17+
-                - Docker (optional)
-                - Kubernetes (for production)
-                
-                ## Environment Variables
-                - API_KEY: OpenAI API key
-                - SERVICE_PORT: Server port (default: 8080)
-                - LOG_LEVEL: Logging level (DEBUG, INFO, WARN)
-                
-                ## Deployment Steps
-                1. Build: mvn clean package
-                2. Test: mvn test
-                3. Docker: docker build -t support-system .
-                4. Run: docker run -e API_KEY=xxx -p 8080:8080 support-system
-                
-                ## Health Check
-                - Endpoint: GET /health
-                - Expected response: {"status": "UP"}
-                - Implement every 30 seconds in production
-                """);
-
-        // FAQ Documentation
-        documents.put("faq", """
-                # Frequently Asked Questions
-                
-                ## How do I get started?
-                1. Create an account on our dashboard
-                2. Generate an API key from settings
-                3. Review API documentation
-                4. Test with sample requests
-                
-                ## What are the system requirements?
-                - Minimum: Java 11, 2GB RAM
-                - Recommended: Java 17+, 4GB RAM
-                - Network: Stable internet connection
-                
-                ## How long does processing take?
-                - Standard requests: < 1 second
-                - Batch operations: 5-30 seconds depending on volume
-                - Async operations: Variable, check status endpoint
-                
-                ## Can I test before production?
-                Yes! Use our staging environment:
-                https://staging-api.company.com/v1
-                Same credentials work for staging.
-                """);
-    }
-
-    public String getDocumentation(String docName) {
-        String doc = documents.get(docName.toLowerCase());
-        if (doc == null) {
-            log.warn("Documentation not found: {}", docName);
-            return "Documentation not found for: " + docName;
+    public void loadFromPaths(List<String> paths) {
+        if (paths == null || paths.isEmpty()) {
+            log.warn("No documentation paths provided to load.");
+            return;
         }
-        return doc;
+
+        for (String pathString : paths) {
+            try {
+                String content = Files.readString(Paths.get(pathString));
+                String fileName = Paths.get(pathString).getFileName().toString().replace(".md", "");
+
+                documents.put(fileName.toLowerCase(), content);
+                log.info("Successfully loaded documentation: {}", fileName);
+            } catch (IOException e) {
+                log.error("Failed to read documentation file at {}: {}", pathString, e.getMessage());
+            } catch (Exception e) {
+                log.error("Unexpected error loading path {}: {}", pathString, e.getMessage());
+            }
+        }
     }
 
     public String searchDocumentation(String query) {
-        query = query.toLowerCase();
+        if (query == null || query.isBlank()) return "";
+
+        String[] queryWords = query.toLowerCase().split("\\s+");
         StringBuilder results = new StringBuilder();
+        boolean found = false;
 
         for (Map.Entry<String, String> entry : documents.entrySet()) {
-            if (entry.getValue().toLowerCase().contains(query)) {
-                results.append("Found in ").append(entry.getKey()).append(":\n");
-                // Extract relevant section (first 500 chars containing the query)
-                String content = entry.getValue();
-                int idx = content.toLowerCase().indexOf(query);
-                int start = Math.max(0, idx - 100);
-                int end = Math.min(content.length(), idx + 400);
-                results.append(content, start, end).append("\n\n");
+            String content = entry.getValue().toLowerCase();
+
+            long matchCount = java.util.Arrays.stream(queryWords)
+                    .filter(word -> word.length() > 2 && content.contains(word))
+                    .count();
+
+            if (matchCount > 0) {
+                found = true;
+                results.append("### Source: ").append(entry.getKey()).append(".md\n");
+
+                String fullContent = entry.getValue();
+                if (fullContent.length() > 1500) {
+                    results.append(fullContent, 0, 1500).append("... [truncated]\n\n");
+                } else {
+                    results.append(fullContent).append("\n\n");
+                }
             }
         }
 
-        return results.length() > 0 ? results.toString() : "No documentation found for: " + query;
+        return found ? results.toString() : "No specific documentation found for this query.";
     }
 
-    public String getAllDocumentationKeys() {
-        return String.join(", ", documents.keySet());
+    public String getDocumentation(String docName) {
+        return documents.getOrDefault(docName.toLowerCase(), "Documentation not found for: " + docName);
     }
 }

@@ -1,9 +1,13 @@
 package com.arcengtr;
 
-import com.arcengtr.agent.Agent;
+import com.arcengtr.agent.AgentConfig;
+import com.arcengtr.agent.AgentFactory;
+import com.arcengtr.agent.BaseAgent;
 import com.arcengtr.client.OpenAiClient;
+import com.arcengtr.config.AgentLoaderService;
 import com.arcengtr.config.SystemConfig;
 import com.arcengtr.crew.SupportCrew;
+import com.arcengtr.documentation.DocumentationManager;
 import com.arcengtr.tool.BillingTools;
 import com.arcengtr.tool.Tool;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -18,105 +22,6 @@ import java.util.Scanner;
 public class App  {
     public static void main( String[] args ) throws Exception {
 
-        // -------------------- 3 version ------------------------------
-
-/*        Dotenv env = Dotenv.load();
-        final String OPENAI_API_KEY = env.get("OPENAI_API_KEY");
-
-        AgentsConfig config = ConfigLoader.loadYamlConfig("agents-config.yaml");
-
-        OpenAiClient client = OpenAiClient.builder()
-                .apiKey(OPENAI_API_KEY)
-                .build();
-
-        OpenAiService openAiService = new OpenAiService(client);
-        DocumentService documentService = new DocumentService();
-
-        BillingService billingService = new BillingService();
-        ToolService toolService = new ToolService(billingService);
-
-        AgentFactory factory = new AgentFactory(openAiService, documentService, toolService);
-
-        Agent technicalAgent = factory.create(config.getAgents().get("technical_specialist"));
-
-        ConversationContext context = new ConversationContext();
-        context.setCurrentAgentId(technicalAgent.getConfig().getId());
-
-        // ---- Turn 1 ----
-        String user1 = "How do I authenticate using an API key in Java?";
-        context.addMessage(new ConversationMessage("user", user1));
-
-        AgentResponse r1 = technicalAgent.process(user1, context);
-        System.out.println("\nAssistant:\n" + r1.getMessage());
-        context.addMessage(new ConversationMessage("assistant", r1.getMessage()));
-
-        // ---- Turn 2 (context-aware) ----
-        String user2 = "What should I do if I get a 401 error?";
-        context.addMessage(new ConversationMessage("user", user2));
-
-        AgentResponse r2 = technicalAgent.process(user2, context);
-        System.out.println("\nAssistant:\n" + r2.getMessage());
-        context.addMessage(new ConversationMessage("assistant", r2.getMessage()));
-
-
-
-
-
-//        Agent billingAgent = factory.create(config.getAgents().get("billing_specialist"));
-//        context.setCurrentAgentId(billingAgent.getConfig().getId());
-//
-//        String billUser1 = "Hi! I’m not sure what I was charged for. What is my current subscription plan?";
-//        String billUser1 = "Can you help me debug my OAuth callback?\n";
-//        context.addMessage(new ConversationMessage("user", billUser1));
-//
-//        AgentResponse br1 = billingAgent.process(billUser1, context);
-//        System.out.println("\n[Billing] Assistant:\n" + br1.getMessage());
-//        context.addMessage(new ConversationMessage("assistant", br1.getMessage()));
-
-//        String billUser2 = "I bought a subscription just 4 days ago, but I’ve changed my mind. Can I get a full refund?";
-//        context.addMessage(new ConversationMessage("user", billUser2));
-//
-//        AgentResponse br2 = billingAgent.process(billUser2, context);
-//        System.out.println("\n[Billing] Assistant:\n" + br2.getMessage());
-//        context.addMessage(new ConversationMessage("assistant", br2.getMessage()));
-//
-//        String billUser3 = "Yes";
-//        context.addMessage(new ConversationMessage("user", billUser3));
-//
-//        AgentResponse br3 = billingAgent.process(billUser3, context);
-//        System.out.println("\n[Billing] Assistant:\n" + br3.getMessage());
-//        context.addMessage(new ConversationMessage("assistant", br3.getMessage()));
-//
-//        String billUser4 = "May you send it to my email?";
-//        context.addMessage(new ConversationMessage("user", billUser4));
-//
-//        AgentResponse br4 = billingAgent.process(billUser4, context);
-//        System.out.println("\n[Billing] Assistant:\n" + br4.getMessage());
-//        context.addMessage(new ConversationMessage("assistant", br4.getMessage()));
-//
-//        String billUser5 = "Yes, send it to 123@gmail.com";
-//        context.addMessage(new ConversationMessage("user", billUser5));
-//
-//        AgentResponse br5 = billingAgent.process(billUser5, context);
-//        System.out.println("\n[Billing] Assistant:\n" + br5.getMessage());
-//        context.addMessage(new ConversationMessage("assistant", br5.getMessage()));
-//
-//        String billUser6 = "May you show my current plan?";
-//        context.addMessage(new ConversationMessage("user", billUser5));
-//
-//        AgentResponse br6 = billingAgent.process(billUser6, context);
-//        System.out.println("\n[Billing] Assistant:\n" + br6.getMessage());
-//        context.addMessage(new ConversationMessage("assistant", br6.getMessage()));
-//
-//        String billUser7 = "Yeah, go on";
-//        context.addMessage(new ConversationMessage("user", billUser7));
-//
-//        AgentResponse br7 = billingAgent.process(billUser7, context);
-//        System.out.println("\n[Billing] Assistant:\n" + br7.getMessage());
-//        context.addMessage(new ConversationMessage("assistant", br7.getMessage()));*/
-
-        // ----------------- version 4 ---------------
-
         try {
             log.info("Initializing Multi-Agent Support System...");
 
@@ -130,24 +35,38 @@ public class App  {
 
             log.info("OpenAI client initialized");
 
+            AgentLoaderService loader = new AgentLoaderService();
+            loader.loadFromResources("agents-config.yaml");
+
+            AgentConfig techConfig = loader.getAgentConfig("technical_specialist");
+            AgentConfig billConfig = loader.getAgentConfig("billing_specialist");
+
+            log.info("Configs loaded for: {} and {}", techConfig.getName(), billConfig.getName());
+
+            log.info(techConfig.toString());
+
+            DocumentationManager techDocManager = new DocumentationManager();
+            techDocManager.loadFromPaths(techConfig.getDocumentationSources());
+
+            log.info("Documentation loaded for Technical Specialist");
+
             // Create billing tools
             Map<String, Tool> billingTools = new HashMap<>();
-            billingTools.put("process_refund", new BillingTools.ProcessRefundTool());
             billingTools.put("send_refund_form", new BillingTools.SendRefundFormTool());
             billingTools.put("get_plan_info", new BillingTools.GetPlanInfoTool());
             billingTools.put("open_support_case", new BillingTools.OpenSupportCaseTool());
 
             log.info("Billing tools registered");
 
-            // Create agents
-            Agent technicalAgent = new Agent(
-                    SystemConfig.getTechnicalSpecialistConfig(),
+
+            BaseAgent technicalAgent = AgentFactory.createDocumentationAgent(
+                    techConfig,
                     openAiClient,
-                    new HashMap<>()
+                    techDocManager
             );
 
-            Agent billingAgent = new Agent(
-                    SystemConfig.getBillingSpecialistConfig(),
+            BaseAgent billingAgent = AgentFactory.createToolAgent(
+                    billConfig,
                     openAiClient,
                     billingTools
             );

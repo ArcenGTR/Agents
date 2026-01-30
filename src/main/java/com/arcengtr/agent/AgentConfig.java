@@ -1,5 +1,6 @@
 package com.arcengtr.agent;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -18,8 +19,14 @@ public class AgentConfig {
     private AgentRole role;
     private String model;
     private double temperature;
+
+    @JsonProperty("max_completion_tokens")
     private int maxCompletionTokens;
+
+    @JsonProperty("system_prompt")
     private String systemPrompt;
+
+    @JsonProperty("documentation_sources")
     private List<String> documentationSources;
 
     public enum AgentRole {

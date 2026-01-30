@@ -11,8 +11,8 @@ import java.util.regex.Pattern;
 
 @Slf4j
 public class AgentRouter {
-    private final Agent technicalAgent;
-    private final Agent billingAgent;
+    private final BaseAgent technicalAgent;
+    private final BaseAgent billingAgent;
     private final OpenAiClient dispatcherClient;
 
     private static final Map<String, AgentConfig.AgentRole> KEYWORD_PATTERNS = new HashMap<>();
@@ -31,16 +31,15 @@ public class AgentRouter {
                 AgentConfig.AgentRole.TECHNICAL);
     }
 
-    public AgentRouter(Agent technicalAgent, Agent billingAgent, OpenAiClient dispatcherClient) {
+    public AgentRouter(BaseAgent technicalAgent, BaseAgent billingAgent, OpenAiClient dispatcherClient) {
         this.technicalAgent = technicalAgent;
         this.billingAgent = billingAgent;
         this.dispatcherClient = dispatcherClient;
     }
 
-    public Agent routeMessage(String userMessage) throws Exception {
+    public BaseAgent routeMessage(String userMessage) throws Exception {
         log.info("Routing message: {}", userMessage);
 
-        // First try keyword-based routing
         AgentConfig.AgentRole detectedRole = detectRoleByKeywords(userMessage);
 
         if (detectedRole != null) {
@@ -48,7 +47,7 @@ public class AgentRouter {
             return selectAgent(detectedRole);
         }
 
-        // Fall back to LLM-based routing
+
         return routeByLLM(userMessage);
     }
 
@@ -61,7 +60,7 @@ public class AgentRouter {
         return null;
     }
 
-    private Agent routeByLLM(String userMessage) throws Exception {
+    private BaseAgent routeByLLM(String userMessage) throws Exception {
         log.info("Using LLM for routing decision");
 
         String routingPrompt = """
@@ -88,7 +87,7 @@ public class AgentRouter {
         return technicalAgent;
     }
 
-    private Agent selectAgent(AgentConfig.AgentRole role) {
+    private BaseAgent selectAgent(AgentConfig.AgentRole role) {
         return switch (role) {
             case BILLING -> billingAgent;
             case TECHNICAL -> technicalAgent;
@@ -97,7 +96,7 @@ public class AgentRouter {
     }
 
     public String getRoutingInfo(String userMessage) throws Exception {
-        Agent selectedAgent = routeMessage(userMessage);
+        BaseAgent selectedAgent = routeMessage(userMessage);
         return "Routing to: " + selectedAgent.getAgentName();
     }
 }

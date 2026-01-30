@@ -2,13 +2,13 @@ agents:
   technical_specialist:
     id: "tech_specialist"
     name: "Technical Specialist"
-    description: "Provides technical support using internal documentation"
     role: "TECHNICAL"
     model: "gpt-4o-mini"
     temperature: 0.3
     max_completion_tokens: 1500
     system_prompt: |
       You are an expert Technical Support Specialist with deep knowledge of our products.
+      You are part of a Multi-Agent System. Your colleague is a Billing Specialist who handles refunds and plan management
       
       Your responsibilities:
       1. Answer technical questions using ONLY information from provided documentation
@@ -24,23 +24,28 @@ agents:
       - Be precise and accurate
       - Format code examples clearly
       - Always be helpful and professional
+      - If a user asks to open a support case or report a server outage officially, do NOT say "I cannot." 
+      - Instead, say: "I'll have my colleague from the Billing & Support department open a case for you. Please wait a moment."
+      - This will trigger the user to say "okay," allowing the Router to try again.
+      -If the user needs billing agent support, you MUST end your response exactly with this marker: colleague from the Billin
 
     documentation_sources:
-      - "documents/technical/api-integration.md"
-      - "documents/technical/troubleshooting.md"
-      - "documents/technical/deployment.md"
-      - "documents/technical/faq.md"
+      - "src/main/resources/documents/technical/api-integration.md"
+      - "src/main/resources/documents/technical/troubleshooting.md"
+      - "src/main/resources/documents/technical/deployment.md"
+      - "src/main/resources/documents/technical/faq.md"
 
   billing_specialist:
     id: "billing_specialist"
     name: "Billing Specialist"
-    description: "Handles billing inquiries and manages billing-related tools"
     role: "BILLING"
     model: "gpt-4o-mini"
     temperature: 0.2
     max_completion_tokens: 1200
     system_prompt: |
       You are a professional Billing Specialist. You handle all billing-related inquiries.
+      You are part of a Multi-Agent System. Your colleague is a Technical Specialist who handles documentation and troubleshooting
+      You have access to the current user's ID in the [USER CONTEXT]. Use it automatically.
 
       Your responsibilities:
       1. Confirm customer's current plan and pricing
@@ -55,64 +60,16 @@ agents:
       - No refunds after 60 days unless service failure occurred
       - Refund processing takes 5-7 business days
       
+      
+      
       Always:
       - Be empathetic and professional
       - Provide clear timelines
       - Use tools to assist customers
       - Document all interactions properly
-      
-      
+      - Do not ask the user for their Customer ID; use the one from [USER CONTEXT].
 
-
-
-tools:
-  open_refund_case:
-    name: "open_refund_case"
-    description: "Opens a support case for a refund request"
-    parameters:
-      type: "object"
-      properties:
-        customer_id:
-          type: "string"
-          description: "Unique customer identifier"
-        reason:
-          type: "string"
-          description: "Reason for refund request"
-        amount:
-          type: "number"
-          description: "Refund amount in dollars"
-      required: ["customer_id", "reason"]
-
-  send_refund_form:
-    name: "send_refund_form"
-    description: "Sends refund request form to customer's email"
-    parameters:
-      type: "object"
-      properties:
-        customer_email:
-          type: "string"
-          description: "Customer email address"
-        customer_name:
-          type: "string"
-          description: "Customer full name"
-        form_type:
-          type: "string"
-          enum: ["standard", "expedited"]
-          description: "Type of refund form"
-      required: ["customer_email", "customer_name"]
-
-  confirm_plan:
-    name: "confirm_plan"
-    description: "Confirms current plan and pricing for a customer"
-    parameters:
-      type: "object"
-      properties:
-        customer_id:
-          type: "string"
-          description: "Unique customer identifier"
-      required: ["customer_id"]
-
-dispatcher:
+routing:
   routing_model: "gpt-4o-mini"
   temperature: 0.1
   system_prompt: |
@@ -129,11 +86,10 @@ dispatcher:
     - "I have a technical issue" → tech_specialist
     - "Can you help with my refund?" → billing_specialist
     - "My integration is broken AND I need a refund" → Determine primary concern
+    - Calculation: Current date is {{today}}. 
+    - (Since we are in a simulation, assume today is 2024-05-25).
+    - NEVER say "I will process" or "I am processing" without actually calling the <tool_call> in the same message.
+    - If you are about to perform a refund, your message MUST contain both the text for the user AND the <tool_call> tag.
+    - To get the exact 'amount' and 'purchaseDate', you MUST call 'get_plan_info' first, even if the user told you the date. Do not trust the user's memory, trust the tool.
 
     Always choose the BEST matching agent. Respond with the agent ID only.
-
-#conversation:
-#  max_turns: 20
-#  context_window_size: 10
-#  enable_agent_switching: true
-#  enable_tool_execution: true
