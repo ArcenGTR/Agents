@@ -1,6 +1,7 @@
-package com.arcengtr.config;
+package com.arcengtr.service;
 
 import com.arcengtr.agent.AgentConfig;
+import com.arcengtr.config.YamlConfig;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;

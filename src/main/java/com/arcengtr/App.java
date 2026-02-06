@@ -4,13 +4,17 @@ import com.arcengtr.agent.AgentConfig;
 import com.arcengtr.agent.AgentFactory;
 import com.arcengtr.agent.BaseAgent;
 import com.arcengtr.client.OpenAiClient;
-import com.arcengtr.config.AgentLoaderService;
+import com.arcengtr.service.AgentLoaderService;
 import com.arcengtr.config.SystemConfig;
 import com.arcengtr.crew.SupportCrew;
-import com.arcengtr.documentation.DocumentationManager;
+import com.arcengtr.service.DocumentationService;
 import com.arcengtr.tool.BillingTools;
 import com.arcengtr.tool.Tool;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.langchain4j.model.embedding.AllMiniLmL6V2EmbeddingModel;
+import dev.langchain4j.model.embedding.EmbeddingModel;
+import io.qdrant.client.QdrantClient;
+import io.qdrant.client.QdrantGrpcClient;
 import lombok.extern.slf4j.Slf4j;
 
 import java.net.http.HttpClient;
@@ -45,7 +49,12 @@ public class App  {
 
             log.info(techConfig.toString());
 
-            DocumentationManager techDocManager = new DocumentationManager();
+            QdrantClient client = new QdrantClient(
+                    QdrantGrpcClient.newBuilder("localhost", 6334, false).build());
+
+            EmbeddingModel embeddingModel = new AllMiniLmL6V2EmbeddingModel();
+
+            DocumentationService techDocManager = new DocumentationService(client, embeddingModel);
             techDocManager.loadFromPaths(techConfig.getDocumentationSources());
 
             log.info("Documentation loaded for Technical Specialist");

@@ -1,7 +1,7 @@
 package com.arcengtr.agent;
 
 import com.arcengtr.client.OpenAiClient;
-import com.arcengtr.documentation.DocumentationManager;
+import com.arcengtr.service.DocumentationService;
 import com.arcengtr.model.ConversationMessage;
 import lombok.extern.slf4j.Slf4j;
 
@@ -10,23 +10,26 @@ import java.util.List;
 
 @Slf4j
 public class DocumentationAgent extends BaseAgent {
-    private final DocumentationManager documentationManager;
+    private final DocumentationService documentationService;
 
     public DocumentationAgent(
             AgentConfig config,
             OpenAiClient openAiClient,
-            DocumentationManager documentationManager
+            DocumentationService documentationService
     ) {
         super(config, openAiClient);
-        this.documentationManager = documentationManager;
+        this.documentationService = documentationService;
     }
 
     @Override
     public String run(String userMessage) throws Exception {
         log.info("[{}] Running (DocumentationAgent) with message: {}", config.getName(), userMessage);
 
+        String hypotheticalAnswer = generateHypotheticalAnswer(userMessage);
+        log.debug("HyDE Answer: {}", hypotheticalAnswer);
+
         // Search for relevant documentation
-        String relevantDocs = documentationManager.searchDocumentation(userMessage);
+        String relevantDocs = documentationService.searchDocumentation(hypotheticalAnswer);
         log.debug("Found relevant documentation: {}", relevantDocs.substring(0, Math.min(100, relevantDocs.length())));
 
         // Build messages with documentation context
@@ -67,26 +70,26 @@ public class DocumentationAgent extends BaseAgent {
         return prompt.toString();
     }
 
+    private String generateHypotheticalAnswer(String query) {
+        String hydePrompt = String.format(
+                "Write a two sentences that would answer this question. " +
+                        "Focus on technical keywords and facts. Question: %s", query);
+
+        try {
+            return openAiClient.ask(
+                    List.of(ConversationMessage.user(hydePrompt)),
+                    "gpt-4o-mini",
+                    0.1,
+                    100
+            );
+        } catch (Exception e) {
+            log.warn("HyDE generation failed, falling back to original query", e);
+            return query;
+        }
+    }
+
     @Override
     public String getAgentType() {
         return "DocumentationAgent (Read-only, fact-based support)";
-    }
-
-    @Override
-    public boolean hasTool() {
-        return false;
-    }
-
-    @Override
-    public boolean usesDocumentation() {
-        return true;
-    }
-
-    public String getDocumentation(String docName) {
-        return documentationManager.getDocumentation(docName);
-    }
-
-    public String searchDocumentation(String query) {
-        return documentationManager.searchDocumentation(query);
     }
 }

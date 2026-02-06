@@ -58,7 +58,4 @@ public abstract class BaseAgent {
 
     public abstract String getAgentType();
 
-    public abstract boolean hasTool();
-
-    public abstract boolean usesDocumentation();
 }

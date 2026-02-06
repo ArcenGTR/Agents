@@ -34,7 +34,7 @@ public class ToolAgent extends BaseAgent {
     public String run(String userMessage) throws Exception {
         log.info("[{}] Processing message: {}", config.getName(), userMessage);
 
-        // 1. Создаем временный список для текущей итерации (ReAct Loop)
+        // ReAct Loop
         List<ConversationMessage> messages = new ArrayList<>();
         messages.add(ConversationMessage.system(buildSystemPrompt()));
         messages.addAll(conversationHistory); // Берем всю прошлую историю
@@ -67,7 +67,6 @@ public class ToolAgent extends BaseAgent {
 
                 iteration++;
             } else {
-                // Это финальный ответ пользователю
                 finalAssistantMessage = response;
                 break;
             }
@@ -129,53 +128,6 @@ public class ToolAgent extends BaseAgent {
     }
 
 
-
-
-
-
-
-    private String processToolCalls(String response) {
-        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(
-                "<tool_call>\\s*([^<]+)\\s*</tool_call>",
-                java.util.regex.Pattern.DOTALL
-        );
-        java.util.regex.Matcher matcher = pattern.matcher(response);
-
-        StringBuilder result = new StringBuilder(response);
-
-        while (matcher.find()) {
-            String toolCallJson = matcher.group(1).trim();
-            try {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> toolCall = objectMapper.readValue(
-                        toolCallJson,
-                        Map.class
-                );
-
-                String toolName = (String) toolCall.get("name");
-                @SuppressWarnings("unchecked")
-                Map<String, Object> arguments = (Map<String, Object>) toolCall.get("arguments");
-
-                if (toolsMap.containsKey(toolName)) {
-                    Tool tool = toolsMap.get(toolName);
-                    log.info("Executing tool: {}", toolName);
-
-                    Object toolResult = tool.execute(arguments);
-                    log.info("Tool result: {}", toolResult);
-
-                    // Append result to response
-                    String toolOutput = "\n\n**Tool Result (" + toolName + "):**\n" +
-                            toolResult.toString() + "\n";
-                    result.append(toolOutput);
-                }
-            } catch (Exception e) {
-                log.error("Error processing tool call", e);
-            }
-        }
-
-        return result.toString();
-    }
-
     public Object executeTool(String toolName, Map<String, Object> arguments) throws Exception {
         if (!toolsMap.containsKey(toolName)) {
             throw new IllegalArgumentException("Tool not found: " + toolName);
@@ -196,15 +148,5 @@ public class ToolAgent extends BaseAgent {
     @Override
     public String getAgentType() {
         return "ToolAgent (Action-based, can use " + toolsMap.size() + " tools)";
-    }
-
-    @Override
-    public boolean hasTool() {
-        return !toolsMap.isEmpty();
-    }
-
-    @Override
-    public boolean usesDocumentation() {
-        return false;
     }
 }
