@@ -1,9 +1,12 @@
 package com.arcengtr.model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.util.List;
 
 @Data
 @Builder
@@ -12,6 +15,12 @@ import lombok.NoArgsConstructor;
 public class ConversationMessage {
     private String role; // "system", "user", "assistant"
     private String content;
+
+    @JsonProperty("tool_calls")
+    private List<ToolCall> toolCalls;
+
+    @JsonProperty("tool_call_id")
+    private String toolCallId;
 
     public static ConversationMessage system(String content) {
         return ConversationMessage.builder()

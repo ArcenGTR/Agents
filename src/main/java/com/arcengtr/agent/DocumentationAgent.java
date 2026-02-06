@@ -80,7 +80,7 @@ public class DocumentationAgent extends BaseAgent {
                     List.of(ConversationMessage.user(hydePrompt)),
                     "gpt-4o-mini",
                     0.1,
-                    100
+                    150
             );
         } catch (Exception e) {
             log.warn("HyDE generation failed, falling back to original query", e);

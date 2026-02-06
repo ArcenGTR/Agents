@@ -1,7 +1,10 @@
 package com.arcengtr.agent;
 
 import com.arcengtr.client.OpenAiClient;
+import com.arcengtr.model.ChatResponse;
 import com.arcengtr.model.ConversationMessage;
+import com.arcengtr.model.Message;
+import com.arcengtr.model.ToolCall;
 import com.arcengtr.tool.Tool;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -34,15 +37,16 @@ public class ToolAgent extends BaseAgent {
     public String run(String userMessage) throws Exception {
         log.info("[{}] Processing message: {}", config.getName(), userMessage);
 
-        // ReAct Loop
         List<ConversationMessage> messages = new ArrayList<>();
         messages.add(ConversationMessage.system(buildSystemPrompt()));
-        messages.addAll(conversationHistory); // Берем всю прошлую историю
+        messages.addAll(conversationHistory);
         messages.add(ConversationMessage.user(userMessage));
 
-        String finalAssistantMessage = "";
-        int iteration = 0;
+        List<Map<String, Object>> nativeTools = toolsMap.values().stream()
+                .map(Tool::toJsonSchemaMap)
+                .toList();
 
+        int iteration = 0;
         while (iteration < MAX_ITERATIONS) {
             String response = openAiClient.ask(
                     messages,
@@ -51,43 +55,91 @@ public class ToolAgent extends BaseAgent {
                     config.getMaxCompletionTokens()
             );
 
+            ChatResponse chatResponse = openAiClient.ask(
+                    messages,
+                    config.getModel(),
+                    0.3,
+                    1000,
+                    nativeTools);
+            Message assistantMessage = chatResponse.getChoices().get(0).getMessage();
+
+            ConversationMessage cm = ConversationMessage.assistant(assistantMessage.getContent());
+            cm.setToolCalls(assistantMessage.getToolCalls());
+
+            messages.add(cm);
+
             log.info("[{}] Iteration {}: {}", config.getName(), iteration, response);
 
-            if (hasToolCalls(response)) {
-                String toolResults = executeAllToolsInResponse(response);
 
-                messages.add(ConversationMessage.assistant(response));
+            if (assistantMessage.getToolCalls() != null && !assistantMessage.getToolCalls().isEmpty()) {
+                for (ToolCall call : assistantMessage.getToolCalls()) {
+                    String functionName = call.getFunction().getName();
+                    String argumentsJson = call.getFunction().getArguments();
 
-                String contextMessage = String.format(
-                        "SYSTEM: Tool execution results:\n%s\n" +
-                                "Use this data to answer the user or decide if another tool call is needed.",
-                        toolResults
-                );
-                messages.add(ConversationMessage.system(contextMessage));
+                    Map<String, Object> args = objectMapper.readValue(argumentsJson, Map.class);
 
+                    log.info("Native execution: {}", functionName);
+                    Object result = toolsMap.get(functionName).execute(args);
+
+                    messages.add(ConversationMessage.builder()
+                            .role("tool")
+                            .toolCallId(call.getId())
+                            .content(objectMapper.writeValueAsString(result))
+                            .build());
+                }
                 iteration++;
             } else {
-                finalAssistantMessage = response;
-                break;
+                String finalResponse = assistantMessage.getContent();
+                addToHistory(ConversationMessage.user(userMessage));
+                addToHistory(ConversationMessage.assistant(finalResponse));
+                return finalResponse;
             }
         }
 
-        addToHistory(ConversationMessage.user(userMessage));
-        addToHistory(ConversationMessage.assistant(finalAssistantMessage));
+        return "Max iterations reached";
 
-        return finalAssistantMessage;
+//        if (hasToolCalls(response)) {
+//                String toolResults = executeAllToolsInResponse(response);
+//
+//                messages.add(ConversationMessage.assistant(response));
+//
+//                String contextMessage = String.format(
+//                        "SYSTEM: Tool execution results:\n%s\n" +
+//                                "Use this data to answer the user or decide if another tool call is needed.",
+//                        toolResults
+//                );
+//                messages.add(ConversationMessage.system(contextMessage));
+//
+//                iteration++;
+//            } else {
+//                finalAssistantMessage = response;
+//                break;
+//            }
+//        }
+//
+//        addToHistory(ConversationMessage.user(userMessage));
+//        addToHistory(ConversationMessage.assistant(finalAssistantMessage));
+//
+//        return finalAssistantMessage;
     }
 
     @Override
     protected String buildSystemPrompt() {
+//        return config.getSystemPrompt() + "\n\n" +
+//                "[USER CONTEXT]\n" +
+//                "- Current User ID: USER-12345\n" +
+//                "- User Email: customer@example.com\n" +
+//                "- Authentication Status: VERIFIED\n\n" +
+//                buildToolsDefinition() +
+//                "\n## Tool Usage Instructions\n" +
+//                "Use tools to fetch missing information. Format: <tool_call>{\"name\": \"...\", \"arguments\": {...}}</tool_call>";
+
         return config.getSystemPrompt() + "\n\n" +
                 "[USER CONTEXT]\n" +
                 "- Current User ID: USER-12345\n" +
                 "- User Email: customer@example.com\n" +
                 "- Authentication Status: VERIFIED\n\n" +
-                buildToolsDefinition() +
-                "\n## Tool Usage Instructions\n" +
-                "Use tools to fetch missing information. Format: <tool_call>{\"name\": \"...\", \"arguments\": {...}}</tool_call>";
+                "Use tools to fetch missing information.";
     }
 
     private String buildToolsDefinition() {

@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
+import java.util.Map;
 
 @Data
 @Builder
@@ -19,4 +20,6 @@ public class ChatRequest {
 
     @JsonProperty("max_tokens")
     private Integer maxTokens;
+
+    private List<Map<String, Object>> tools;
 }

@@ -23,16 +23,30 @@ public abstract class Tool {
         return name;
     }
 
-    public String getDescription() {
-        return description;
-    }
-
-    public Map<String, String> getParameters() {
-        return parameters;
-    }
-
     protected void addParameter(String paramName, String paramType, String description) {
         parameters.put(paramName, paramType);
+    }
+
+    public Map<String, Object> toJsonSchemaMap() {
+        Map<String, Object> properties = new HashMap<>();
+
+        parameters.forEach((paramName, paramType) -> {
+            properties.put(paramName, Map.of("type", paramType));
+        });
+
+        Map<String, Object> function = new HashMap<>();
+        function.put("name", name);
+        function.put("description", description);
+        function.put("parameters", Map.of(
+                "type", "object",
+                "properties", properties,
+                "required", parameters.keySet()
+        ));
+
+        return Map.of(
+                "type", "function",
+                "function", function
+        );
     }
 
     public String toJsonSchema() {
