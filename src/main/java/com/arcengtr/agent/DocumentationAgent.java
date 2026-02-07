@@ -1,8 +1,9 @@
 package com.arcengtr.agent;
 
 import com.arcengtr.client.OpenAiClient;
+import com.arcengtr.config.AgentConfig;
 import com.arcengtr.service.DocumentationService;
-import com.arcengtr.model.ConversationMessage;
+import com.arcengtr.dto.ConversationMessage;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;

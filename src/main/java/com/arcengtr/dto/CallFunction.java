@@ -1,15 +1,13 @@
-package com.arcengtr.model;
+package com.arcengtr.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.Map;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Funct {
+public class CallFunction {
     String name;
     String arguments;
 }

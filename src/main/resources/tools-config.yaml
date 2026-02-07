@@ -1,0 +1,21 @@
+tools:
+  - name: "get_plan_info"
+    description: "Retrieve customer's current plan and pricing information"
+    implementationClass: "com.arcengtr.tool.impl.GetPlanInfoTool"
+    parameters:
+      customerId: { type: "string", description: "The customer ID" }
+
+  - name: "send_refund_form"
+    description: "Send a refund request form to the customer"
+    implementationClass: "com.arcengtr.tool.impl.SendRefundFormTool"
+    parameters:
+      customerId: { type: "string", description: "The customer ID" }
+      email: { type: "string", description: "Customer email address" }
+
+  - name: "open_support_case"
+    description: "Open a billing support case for further investigation"
+    implementationClass: "com.arcengtr.tool.impl.OpenSupportCaseTool"
+    parameters:
+      customerId: { type: "string", description: "The customer ID" }
+      issueType: { type: "string", description: "Type of issue" }
+      description: { type: "string", description: "Detailed description" }

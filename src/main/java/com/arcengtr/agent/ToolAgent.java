@@ -1,10 +1,10 @@
 package com.arcengtr.agent;
 
 import com.arcengtr.client.OpenAiClient;
-import com.arcengtr.model.ChatResponse;
-import com.arcengtr.model.ConversationMessage;
-import com.arcengtr.model.Message;
-import com.arcengtr.model.ToolCall;
+import com.arcengtr.config.AgentConfig;
+import com.arcengtr.dto.ChatResponse;
+import com.arcengtr.dto.ConversationMessage;
+import com.arcengtr.dto.ToolCall;
 import com.arcengtr.tool.Tool;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -12,8 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Slf4j
 public class ToolAgent extends BaseAgent {
@@ -61,7 +59,7 @@ public class ToolAgent extends BaseAgent {
                     0.3,
                     1000,
                     nativeTools);
-            Message assistantMessage = chatResponse.getChoices().get(0).getMessage();
+            ConversationMessage assistantMessage = chatResponse.getChoices().get(0).getMessage();
 
             ConversationMessage cm = ConversationMessage.assistant(assistantMessage.getContent());
             cm.setToolCalls(assistantMessage.getToolCalls());
@@ -69,7 +67,6 @@ public class ToolAgent extends BaseAgent {
             messages.add(cm);
 
             log.info("[{}] Iteration {}: {}", config.getName(), iteration, response);
-
 
             if (assistantMessage.getToolCalls() != null && !assistantMessage.getToolCalls().isEmpty()) {
                 for (ToolCall call : assistantMessage.getToolCalls()) {
@@ -97,104 +94,17 @@ public class ToolAgent extends BaseAgent {
         }
 
         return "Max iterations reached";
-
-//        if (hasToolCalls(response)) {
-//                String toolResults = executeAllToolsInResponse(response);
-//
-//                messages.add(ConversationMessage.assistant(response));
-//
-//                String contextMessage = String.format(
-//                        "SYSTEM: Tool execution results:\n%s\n" +
-//                                "Use this data to answer the user or decide if another tool call is needed.",
-//                        toolResults
-//                );
-//                messages.add(ConversationMessage.system(contextMessage));
-//
-//                iteration++;
-//            } else {
-//                finalAssistantMessage = response;
-//                break;
-//            }
-//        }
-//
-//        addToHistory(ConversationMessage.user(userMessage));
-//        addToHistory(ConversationMessage.assistant(finalAssistantMessage));
-//
-//        return finalAssistantMessage;
     }
 
     @Override
     protected String buildSystemPrompt() {
-//        return config.getSystemPrompt() + "\n\n" +
-//                "[USER CONTEXT]\n" +
-//                "- Current User ID: USER-12345\n" +
-//                "- User Email: customer@example.com\n" +
-//                "- Authentication Status: VERIFIED\n\n" +
-//                buildToolsDefinition() +
-//                "\n## Tool Usage Instructions\n" +
-//                "Use tools to fetch missing information. Format: <tool_call>{\"name\": \"...\", \"arguments\": {...}}</tool_call>";
 
         return config.getSystemPrompt() + "\n\n" +
                 "[USER CONTEXT]\n" +
                 "- Current User ID: USER-12345\n" +
                 "- User Email: customer@example.com\n" +
                 "- Authentication Status: VERIFIED\n\n" +
-                "Use tools to fetch missing information.";
-    }
-
-    private String buildToolsDefinition() {
-        if (toolsMap.isEmpty()) return "";
-        StringBuilder sb = new StringBuilder("## Available Tools\n");
-        for (Tool tool : toolsMap.values()) {
-            sb.append(tool.toJsonSchema()).append("\n");
-        }
-        return sb.toString();
-    }
-
-    private boolean hasToolCalls(String response) {
-        return response.contains("<tool_call>");
-    }
-
-    private String executeAllToolsInResponse(String response) {
-        Pattern pattern = Pattern.compile("<tool_call>\\s*([^<]+)\\s*</tool_call>", Pattern.DOTALL);
-        Matcher matcher = pattern.matcher(response);
-        StringBuilder allResults = new StringBuilder();
-
-        while (matcher.find()) {
-            String json = matcher.group(1).trim();
-            try {
-                Map<String, Object> call = objectMapper.readValue(json, Map.class);
-                String name = (String) call.get("name");
-                Map<String, Object> args = (Map<String, Object>) call.get("arguments");
-
-                if (toolsMap.containsKey(name)) {
-                    log.info("Executing: {}", name);
-                    Object result = toolsMap.get(name).execute(args);
-                    allResults.append("\n[Result of ").append(name).append("]: ").append(result);
-                }
-            } catch (Exception e) {
-                allResults.append("\n[Error executing tool]: ").append(e.getMessage());
-            }
-        }
-        return allResults.toString();
-    }
-
-
-    public Object executeTool(String toolName, Map<String, Object> arguments) throws Exception {
-        if (!toolsMap.containsKey(toolName)) {
-            throw new IllegalArgumentException("Tool not found: " + toolName);
-        }
-        Tool tool = toolsMap.get(toolName);
-        log.info("Directly executing tool: {}", toolName);
-        return tool.execute(arguments);
-    }
-
-    public Map<String, Tool> getTools() {
-        return toolsMap;
-    }
-
-    public List<String> getToolNames() {
-        return new ArrayList<>(toolsMap.keySet());
+                "Use tools to fetch missing information.";  // Mock user info
     }
 
     @Override

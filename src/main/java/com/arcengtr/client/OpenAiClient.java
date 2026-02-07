@@ -1,8 +1,8 @@
 package com.arcengtr.client;
 
-import com.arcengtr.model.ChatRequest;
-import com.arcengtr.model.ChatResponse;
-import com.arcengtr.model.ConversationMessage;
+import com.arcengtr.dto.ChatRequest;
+import com.arcengtr.dto.ChatResponse;
+import com.arcengtr.dto.ConversationMessage;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;

@@ -1,4 +1,4 @@
-package com.arcengtr.agent;
+package com.arcengtr.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;

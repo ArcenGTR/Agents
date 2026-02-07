@@ -1,7 +1,8 @@
 package com.arcengtr.agent;
 
 import com.arcengtr.client.OpenAiClient;
-import com.arcengtr.model.ConversationMessage;
+import com.arcengtr.config.AgentConfig;
+import com.arcengtr.dto.ConversationMessage;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
@@ -18,13 +19,13 @@ public class AgentRouter {
     private static final Map<String, AgentConfig.AgentRole> KEYWORD_PATTERNS = new HashMap<>();
 
     static {
-        // Billing keywords
-        KEYWORD_PATTERNS.put("(?i).*(refund|payment|invoice|billing|charge|cost|price|subscription|plan).*",
+        // Billing
+        KEYWORD_PATTERNS.put("(?i).*(refund|payment|invoice|billing|charge|cost|price|subscription|plan|ticket).*",
                 AgentConfig.AgentRole.BILLING);
-        KEYWORD_PATTERNS.put("(?i).*(cancel subscription|upgrade plan|downgrade|payment method).*",
+        KEYWORD_PATTERNS.put("(?i).*(cancel subscription|upgrade plan|downgrade|payment method|open ticket).*",
                 AgentConfig.AgentRole.BILLING);
 
-        // Technical keywords
+        // Technical
         KEYWORD_PATTERNS.put("(?i).*(error|bug|crash|timeout|connection|api|integration|code|debug).*",
                 AgentConfig.AgentRole.TECHNICAL);
         KEYWORD_PATTERNS.put("(?i).*(how do i|how to|tutorial|guide|documentation|deploy).*",
@@ -41,12 +42,10 @@ public class AgentRouter {
         log.info("Routing message: {}", userMessage);
 
         AgentConfig.AgentRole detectedRole = detectRoleByKeywords(userMessage);
-
         if (detectedRole != null) {
             log.info("Routed by keyword matching to: {}", detectedRole);
             return selectAgent(detectedRole);
         }
-
 
         return routeByLLM(userMessage);
     }
@@ -93,10 +92,5 @@ public class AgentRouter {
             case TECHNICAL -> technicalAgent;
             default -> technicalAgent;
         };
-    }
-
-    public String getRoutingInfo(String userMessage) throws Exception {
-        BaseAgent selectedAgent = routeMessage(userMessage);
-        return "Routing to: " + selectedAgent.getAgentName();
     }
 }

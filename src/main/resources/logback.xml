@@ -1,0 +1,17 @@
+<configuration>
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <logger name="io.grpc" level="${GRPC_LOG_LEVEL:-WARN}"/>
+    <logger name="io.netty" level="${NETTY_LOG_LEVEL:-WARN}"/>
+    <logger name="org.apache.http" level="${HTTP_LOG_LEVEL:-WARN}"/>
+
+    <logger name="com.arcengtr" level="${APP_LOG_LEVEL:-DEBUG}"/>
+
+    <root level="${LOG_LEVEL:-INFO}">
+        <appender-ref ref="STDOUT" />
+    </root>
+</configuration>

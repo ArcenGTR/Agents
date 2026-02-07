@@ -1,6 +1,6 @@
 package com.arcengtr;
 
-import com.arcengtr.agent.AgentConfig;
+import com.arcengtr.config.AgentConfig;
 import com.arcengtr.agent.AgentFactory;
 import com.arcengtr.agent.BaseAgent;
 import com.arcengtr.client.OpenAiClient;
@@ -8,7 +8,7 @@ import com.arcengtr.service.AgentLoaderService;
 import com.arcengtr.config.SystemConfig;
 import com.arcengtr.crew.SupportCrew;
 import com.arcengtr.service.DocumentationService;
-import com.arcengtr.tool.BillingTools;
+import com.arcengtr.service.ToolLoaderService;
 import com.arcengtr.tool.Tool;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.langchain4j.model.embedding.AllMiniLmL6V2EmbeddingModel;
@@ -41,7 +41,6 @@ public class App  {
 
             AgentLoaderService loader = new AgentLoaderService();
             loader.loadFromResources("agents-config.yaml");
-
             AgentConfig techConfig = loader.getAgentConfig("technical_specialist");
             AgentConfig billConfig = loader.getAgentConfig("billing_specialist");
 
@@ -50,7 +49,7 @@ public class App  {
             log.info(techConfig.toString());
 
             QdrantClient client = new QdrantClient(
-                    QdrantGrpcClient.newBuilder("localhost", 6334, false).build());
+                    QdrantGrpcClient.newBuilder(SystemConfig.getDbHostname(), 6334, false).build());
 
             EmbeddingModel embeddingModel = new AllMiniLmL6V2EmbeddingModel();
 
@@ -60,13 +59,10 @@ public class App  {
             log.info("Documentation loaded for Technical Specialist");
 
             // Create billing tools
-            Map<String, Tool> billingTools = new HashMap<>();
-            billingTools.put("send_refund_form", new BillingTools.SendRefundFormTool());
-            billingTools.put("get_plan_info", new BillingTools.GetPlanInfoTool());
-            billingTools.put("open_support_case", new BillingTools.OpenSupportCaseTool());
+            ToolLoaderService toolLoader = new ToolLoaderService();
+            Map<String, Tool> billingTools = toolLoader.loadTools("tools-config.yaml");
 
-            log.info("Billing tools registered");
-
+            log.info("Billing tools registered: {}", billingTools.keySet());
 
             BaseAgent technicalAgent = AgentFactory.createDocumentationAgent(
                     techConfig,

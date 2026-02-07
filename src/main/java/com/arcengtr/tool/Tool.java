@@ -1,15 +1,32 @@
 package com.arcengtr.tool;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public abstract class Tool {
     protected String name;
     protected String description;
-    protected Map<String, String> parameters;
+    protected Map<String, ParameterInfo> parameters;
+    protected String implementationClass;
+
+    @Data
+    public static class ParameterInfo {
+        private String type;
+        private String description;
+    }
+
+    public abstract Object execute(Map<String, Object> arguments) throws Exception;
 
     public Tool(String name, String description) {
         this.name = name;
@@ -17,59 +34,26 @@ public abstract class Tool {
         this.parameters = new HashMap<>();
     }
 
-    public abstract Object execute(Map<String, Object> arguments) throws Exception;
-
-    public String getName() {
-        return name;
-    }
-
-    protected void addParameter(String paramName, String paramType, String description) {
-        parameters.put(paramName, paramType);
-    }
-
     public Map<String, Object> toJsonSchemaMap() {
         Map<String, Object> properties = new HashMap<>();
-
-        parameters.forEach((paramName, paramType) -> {
-            properties.put(paramName, Map.of("type", paramType));
+        parameters.forEach((pName, pInfo) -> {
+            properties.put(pName, Map.of(
+                    "type", pInfo.getType(),
+                    "description", pInfo.getDescription() != null ? pInfo.getDescription() : ""
+            ));
         });
-
-        Map<String, Object> function = new HashMap<>();
-        function.put("name", name);
-        function.put("description", description);
-        function.put("parameters", Map.of(
-                "type", "object",
-                "properties", properties,
-                "required", parameters.keySet()
-        ));
 
         return Map.of(
                 "type", "function",
-                "function", function
+                "function", Map.of(
+                        "name", name,
+                        "description", description,
+                        "parameters", Map.of(
+                                "type", "object",
+                                "properties", properties,
+                                "required", parameters.keySet()
+                        )
+                )
         );
-    }
-
-    public String toJsonSchema() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("{\n");
-        sb.append("  \"name\": \"").append(name).append("\",\n");
-        sb.append("  \"description\": \"").append(description).append("\",\n");
-        sb.append("  \"parameters\": {\n");
-        sb.append("    \"type\": \"object\",\n");
-        sb.append("    \"properties\": {\n");
-
-        boolean first = true;
-        for (Map.Entry<String, String> param : parameters.entrySet()) {
-            if (!first) sb.append(",\n");
-            sb.append("      \"").append(param.getKey()).append("\": {\n");
-            sb.append("        \"type\": \"").append(param.getValue()).append("\"\n");
-            sb.append("      }");
-            first = false;
-        }
-
-        sb.append("\n    }\n");
-        sb.append("  }\n");
-        sb.append("}\n");
-        return sb.toString();
     }
 }

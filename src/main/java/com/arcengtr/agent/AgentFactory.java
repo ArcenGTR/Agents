@@ -1,6 +1,7 @@
 package com.arcengtr.agent;
 
 import com.arcengtr.client.OpenAiClient;
+import com.arcengtr.config.AgentConfig;
 import com.arcengtr.service.DocumentationService;
 import com.arcengtr.tool.Tool;
 import lombok.extern.slf4j.Slf4j;

@@ -3,7 +3,7 @@ package com.arcengtr.crew;
 import com.arcengtr.agent.AgentRouter;
 import com.arcengtr.agent.BaseAgent;
 import com.arcengtr.client.OpenAiClient;
-import com.arcengtr.model.ConversationMessage;
+import com.arcengtr.dto.ConversationMessage;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
@@ -30,16 +30,16 @@ public class SupportCrew {
     }
 
     public String processUserMessage(String userMessage) throws Exception {
+
         log.info("Processing user message: {}", userMessage);
 
-        ConversationMessage userMsg = ConversationMessage.user(userMessage);
-        sharedHistory.add(userMsg);
+        sharedHistory.add(ConversationMessage.user(userMessage));
 
         BaseAgent selectedAgent = router.routeMessage(userMessage);
         log.info("Selected agent: {} [{}]", selectedAgent.getAgentName(), selectedAgent.getAgentType());
-
         String response = selectedAgent.run(userMessage);
 
+        // to be replaced when the appropriate tool will be available
         if (response.contains("colleague from the Billing")) {
             log.info("Hand-off detected! Automatically re-routing to Billing Specialist...");
 

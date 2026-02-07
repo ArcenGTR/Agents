@@ -1,10 +1,8 @@
-package com.arcengtr.model;
+package com.arcengtr.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.Map;
 
 @Data
 @NoArgsConstructor
@@ -12,5 +10,5 @@ import java.util.Map;
 public class ToolCall {
     private String id;
     private String type;
-    private Funct function;
+    private CallFunction function;
 }

@@ -9,6 +9,11 @@ services:
       - .env
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+    command: >
+      sh -c "until nc -z qdrant 6334; do echo 'Waiting for Qdrant...'; sleep 1; done; 
+      java -jar app.jar"
+    depends_on:
+      - qdrant
 
 
   qdrant:
@@ -22,4 +27,4 @@ services:
       - ./qdrant_config.yaml:/qdrant/config.yaml:z
     restart: always
     environment:
-      - QDFRANT__SERVICE__ENABLE_STATIC_CONTENT=1
+      - QDRANT__SERVICE__ENABLE_STATIC_CONTENT=1
